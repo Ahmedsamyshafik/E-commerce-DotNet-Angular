@@ -1,0 +1,9 @@
+<div class="d-flex justify-content-center align-items-center mt-5">
+  <pagination
+    [boundaryLinks]="true"
+    [itemsPerPage]="PageSize"
+    [totalItems]="totalCount"
+    [(ngModel)]="currentPage"
+    (pageChanged)="onPageChanged($event)"
+  ></pagination>
+</div>

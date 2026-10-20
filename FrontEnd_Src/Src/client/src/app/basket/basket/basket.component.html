@@ -1,0 +1,90 @@
+@if (!basket || basket.items.length === 0) {
+  <div class="container pt-5 text-center">
+    <h4>Your basket is empty</h4>
+    <p class="text-muted">Add products from the shop to start an order.</p>
+    <a routerLink="/shop" class="btn btn-dark mt-2">Go to shop</a>
+  </div>
+} @else {
+  <div class="container pt-4 flex-contaier">
+    <div class="basket-container">
+      <table class="table table-hover custom-table">
+        <thead>
+          <tr class="bg-info text-white">
+            <th scope="col">Product</th>
+            <th scope="col"></th>
+            <th scope="col">Description</th>
+            <th scope="col">Price</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Total</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of basket.items; track item.productId) {
+            <tr>
+              <td>
+                <a
+                  routerLink="/shop/product-details/{{ item.productId }}"
+                  class="text-dark text-decoration-none"
+                >
+                  {{ item.productName }}
+                </a>
+              </td>
+              <td>
+                @if (item.productImgsUrl?.length) {
+                  <img
+                    [src]="imageBaseUrl + item.productImgsUrl[0]"
+                    class="product-image img-fluid"
+                    [alt]="item.productName"
+                  />
+                } @else {
+                  <span class="visually-hidden">No image available</span>
+                }
+              </td>
+              <td class="description">
+                {{ item.productDescription }}
+              </td>
+              <td>{{ item.unitPrice | currency }}</td>
+              <td>
+                <div class="d-flex justify-content-center align-items-center">
+                  <button
+                    type="button"
+                    class="btn btn-sm text-danger"
+                    [attr.aria-label]="'Decrease quantity of ' + item.productName"
+                    (click)="decrease(item)"
+                  >
+                    <i class="fa fa-minus" aria-hidden="true"></i>
+                  </button>
+                  <span class="mx-2">{{ item.quantity }}</span>
+                  <button
+                    type="button"
+                    class="btn btn-sm text-info"
+                    [attr.aria-label]="'Increase quantity of ' + item.productName"
+                    (click)="increase(item)"
+                  >
+                    <i class="fa fa-plus" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </td>
+              <td>{{ item.quantity * item.unitPrice | currency }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  [attr.aria-label]="'Remove ' + item.productName + ' from basket'"
+                  (click)="remove(item)"
+                >
+                  <i class="fa fa-trash" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="order-summary-container">
+      <app-order-total></app-order-total>
+      <a routerLink="/checkout" class="btn btn-dark w-100 mt-3">Proceed to checkout</a>
+    </div>
+  </div>
+}

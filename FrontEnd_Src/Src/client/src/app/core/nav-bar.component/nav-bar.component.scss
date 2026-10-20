@@ -1,0 +1,74 @@
+// styles.scss
+$primary-color: #3f51b5;
+$secondary-color: #5c6bc0;
+$accent-color: #ff4081;
+$light-color: #ffffff;
+$dark-color: #212121;
+$navbar-padding: 1rem;
+$transition-duration: 0.3s;
+
+.navbar {
+  background: linear-gradient(45deg, $primary-color, $secondary-color);
+  padding: $navbar-padding;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  .navbar-nav {
+    .nav-item {
+      .nav-link {
+        color: $light-color;
+        font-size: 1.1rem;
+        padding: 0.75rem 1rem;
+        transition:
+          color $transition-duration ease,
+          background-color $transition-duration ease;
+
+        &:hover {
+          color: $accent-color;
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 0.5rem;
+        }
+        &.active {
+          color: $accent-color;
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 0.5rem;
+        }
+      }
+    }
+  }
+
+  .dropdown-menu {
+    background-color: $dark-color;
+    border-radius: 0.5rem;
+
+    a {
+      color: $light-color;
+      padding: 0.75rem 1rem;
+      transition: background-color $transition-duration ease;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+}
+.btn-search {
+  background-color: $accent-color;
+  color: white;
+  border: none;
+}
+.search-form {
+  width: 100%;
+  max-width: 420px;
+
+  @media (max-width: 991.98px) {
+    margin: 1rem 0;
+  }
+}
+.basket-icon {
+  display: inline-block;
+}
+@media (max-width: 992px) {
+  .navbar {
+    padding: 0 15px;
+  }
+}

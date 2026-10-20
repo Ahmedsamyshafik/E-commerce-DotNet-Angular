@@ -1,0 +1,110 @@
+<nav class="navbar navbar-expand-lg navbar-light">
+  <div class="container">
+    <a routerLink="/" class="navbar-brand d-flex align-items-center" (click)="closeMenu()">
+      <img
+        src="web_imgs/logo.jpg"
+        alt=""
+        width="30"
+        height="30"
+        class="d-inline-block align-top me-2"
+      />
+      <i class="text-white">E-commerce</i>
+    </a>
+
+    <button
+      class="navbar-toggler"
+      type="button"
+      aria-controls="navbarNav"
+      [attr.aria-expanded]="isMenuOpen"
+      aria-label="Toggle navigation"
+      (click)="toggleMenu()"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav" [class.show]="isMenuOpen">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a
+            routerLink="/"
+            class="nav-link"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeMenu()"
+            >Home</a
+          >
+        </li>
+        <li class="nav-item">
+          <a routerLink="/shop" class="nav-link" routerLinkActive="active" (click)="closeMenu()"
+            >Shopping</a
+          >
+        </li>
+      </ul>
+
+      <form class="d-flex mx-auto position-relative search-form" (submit)="onSearch($event, searchInput.value); searchInput.value = ''">
+        <div class="input-group">
+          <label class="visually-hidden" for="siteSearch">Search products</label>
+          <input
+            #searchInput
+            id="siteSearch"
+            class="form-control"
+            type="text"
+            placeholder="Search..."
+            autocomplete="off"
+          />
+          <button class="btn btn-search" type="submit" aria-label="Search products">
+            <span class="material-icons" aria-hidden="true">search</span>
+          </button>
+        </div>
+      </form>
+
+      <ul class="navbar-nav ms-auto align-items-center">
+        <li class="nav-item">
+          <a
+            routerLink="/basket"
+            class="nav-link"
+            aria-label="Basket"
+            (click)="closeMenu()"
+          >
+            <span class="basket-icon" [matBadge]="count" matBadgeColor="warn">
+              <span class="material-icons" aria-hidden="true">shopping_cart</span>
+            </span>
+          </a>
+        </li>
+
+        <li class="nav-item dropdown position-relative">
+          <button
+            type="button"
+            class="nav-link dropdown-toggle d-flex align-items-center cursor-pointer border-0 bg-transparent"
+            aria-haspopup="true"
+            aria-label="Account menu"
+            [attr.aria-expanded]="isDropdownOpen"
+            (click)="toggleDropdown()"
+          >
+            <span class="material-icons" aria-hidden="true">account_circle</span>
+          </button>
+
+          <div class="dropdown-menu dropdown-menu-end" [class.show]="isDropdownOpen">
+            <a
+              routerLink="/account/register"
+              class="dropdown-item d-flex align-items-center justify-content-between"
+              (click)="closeMenu()"
+            >
+              <span>Register</span>
+              <i class="fa fa-user-plus ms-2" aria-hidden="true"></i>
+            </a>
+
+            <a
+              routerLink="/account/login"
+              class="dropdown-item d-flex align-items-center justify-content-between"
+              (click)="closeMenu()"
+            >
+              <span>Login</span>
+              <i class="fa fa-sign-in ms-2" aria-hidden="true"></i>
+            </a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>

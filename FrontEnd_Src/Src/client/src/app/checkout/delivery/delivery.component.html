@@ -1,0 +1,34 @@
+<form [formGroup]="delivery">
+  @if (isLoading) {
+    <p class="text-muted">Loading delivery options...</p>
+  } @else if (errorMessage) {
+    <div class="alert alert-danger" role="alert">{{ errorMessage }}</div>
+  } @else {
+    <mat-radio-group
+      (change)="SetShippingPrice()"
+      formControlName="delivery"
+      aria-label="Select a delivery method"
+    >
+      @for (item of deliveries; track item.id) {
+        <mat-radio-button [value]="item.id">
+          {{ item.name }}
+          <p class="mb-0 small">{{ item.description }} ({{ item.deliveryTime }} days)</p>
+          <p class="mb-2 fw-bold small">Price: {{ item.price | currency }}</p>
+        </mat-radio-button>
+      }
+    </mat-radio-group>
+  }
+
+  <div class="d-flex justify-content-between mt-3">
+    <button mat-button matStepperPrevious type="button">Back</button>
+    <button
+      mat-button
+      matStepperNext
+      type="button"
+      [disabled]="delivery.invalid"
+      (click)="SetShippingPrice()"
+    >
+      Next
+    </button>
+  </div>
+</form>

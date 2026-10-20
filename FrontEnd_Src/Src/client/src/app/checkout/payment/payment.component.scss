@@ -1,0 +1,26 @@
+
+.payment-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: #eef4ff;
+  color: #0d6efd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.card {
+  transition: box-shadow 0.2s ease;
+}
+
+.btn-primary {
+  padding: 14px;
+  font-weight: 600;
+}
+
+.btn-primary:disabled {
+  cursor: not-allowed;
+}

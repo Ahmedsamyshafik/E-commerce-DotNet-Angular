@@ -1,0 +1,107 @@
+<div class="container py-5" aria-live="polite">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      @switch (state) {
+        @case ('checking') {
+          <div class="card border-0 shadow rounded-4 text-center p-5">
+            <div class="spinner-border text-primary mx-auto mb-3" role="status" aria-hidden="true"></div>
+            <h4>Confirming your payment...</h4>
+            <p class="text-muted mb-0">
+              Please keep this page open while we check your order status.
+            </p>
+          </div>
+        }
+
+        @case ('confirmed') {
+          <div class="card border-0 shadow rounded-4 text-center p-5">
+            <i class="fa-solid fa-circle-check text-success display-4 mb-3" aria-hidden="true"></i>
+            <h3>Payment confirmed</h3>
+            <p class="text-muted">Thank you. Your order has been paid.</p>
+
+            @if (order) {
+              <ul class="list-group list-group-flush text-start my-3">
+                <li class="list-group-item d-flex justify-content-between">
+                  <span class="text-muted">Order number</span>
+                  <strong>#{{ order.orderId }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                  <span class="text-muted">Order date</span>
+                  <strong>{{ order.createdAt | date: 'medium' }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                  <span class="text-muted">Total</span>
+                  <strong>{{ order.total | currency }}</strong>
+                </li>
+              </ul>
+            }
+
+            <a routerLink="/shop" class="btn btn-dark w-100 mt-2">Continue shopping</a>
+          </div>
+        }
+
+        @case ('failed') {
+          <div class="card border-0 shadow rounded-4 text-center p-5">
+            <i class="fa-solid fa-circle-xmark text-danger display-4 mb-3" aria-hidden="true"></i>
+            <h3>Payment was not completed</h3>
+            <p class="text-muted">
+              This order is not marked as paid. If you believe you were charged, please contact
+              support before trying again.
+            </p>
+            @if (order) {
+              <p class="mb-3">Order reference: <strong>#{{ order.orderId }}</strong></p>
+            }
+            <a routerLink="/shop" class="btn btn-primary w-100 mb-2">Return to the shop</a>
+            <a routerLink="/basket" class="btn btn-outline-dark w-100">View basket</a>
+          </div>
+        }
+
+        @case ('processing') {
+          <div class="card border-0 shadow rounded-4 text-center p-5">
+            <i class="fa-solid fa-clock text-warning display-4 mb-3" aria-hidden="true"></i>
+            <h3>Still waiting for confirmation</h3>
+            <p class="text-muted">
+              Your payment may still be processing. We could not confirm it yet; this can
+              take a little longer with some payment providers.
+            </p>
+            @if (order) {
+              <p class="mb-3">
+                Order reference: <strong>#{{ order.orderId }}</strong>
+              </p>
+            }
+            <button type="button" class="btn btn-primary w-100 mb-2" (click)="refresh()">
+              Check again
+            </button>
+            <a routerLink="/shop" class="btn btn-outline-dark w-100">Return to the shop</a>
+          </div>
+        }
+
+        @case ('notFound') {
+          <div class="card border-0 shadow rounded-4 text-center p-5">
+            <i class="fa-solid fa-circle-info text-secondary display-4 mb-3" aria-hidden="true"></i>
+            <h3>No recent order to confirm</h3>
+            <p class="text-muted">
+              We could not find a recent order in this browser session, so there is no
+              payment to confirm here.
+            </p>
+            <a routerLink="/shop" class="btn btn-dark w-100">Go to the shop</a>
+          </div>
+        }
+
+        @case ('signedOut') {
+          <div class="card border-0 shadow rounded-4 text-center p-5">
+            <i class="fa-solid fa-user-lock text-secondary display-4 mb-3" aria-hidden="true"></i>
+            <h3>Please sign in</h3>
+            <p class="text-muted">Sign in to check the status of your order.</p>
+            <a
+              routerLink="/account/login"
+              [queryParams]="{ returnUrl: '/Success' }"
+              class="btn btn-primary w-100"
+            >
+              Sign in
+            </a>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</div>

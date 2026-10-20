@@ -1,0 +1,100 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 shadow rounded-4 overflow-hidden">
+        <!-- Header -->
+        <div class="bg-primary text-white text-center py-4">
+          <i class="fa-solid fa-lock fs-2 mb-2" aria-hidden="true"></i>
+          <h3 class="mb-1">Secure Checkout</h3>
+          <p class="mb-0 opacity-75">Complete your purchase securely with Stripe</p>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+          <!-- Payment Info -->
+          <div class="d-flex align-items-center gap-3 mb-4">
+            <div class="payment-icon">
+              <i class="fa-regular fa-credit-card" aria-hidden="true"></i>
+            </div>
+
+            <div>
+              <h5 class="mb-1">Card Payment</h5>
+              <p class="text-muted mb-0 small">Credit or debit card</p>
+            </div>
+
+            <div class="ms-auto">
+              <i class="fa-brands fa-cc-visa fs-2 text-primary" aria-hidden="true"></i>
+              <i class="fa-brands fa-cc-mastercard fs-2 ms-1" aria-hidden="true"></i>
+            </div>
+          </div>
+
+          <hr class="text-secondary opacity-25" />
+
+          <!-- Order Summary -->
+          @if (hasPendingOrder && !hasBasketItems) {
+            <div class="alert alert-info" role="status">
+              <i class="fa-solid fa-circle-info me-2" aria-hidden="true"></i>
+              Your previous order is awaiting payment. Continue to Stripe to complete it; the
+              amount is shown on the secure payment page.
+            </div>
+          } @else {
+            <h5 class="mb-3">Order Summary</h5>
+
+            <div class="d-flex justify-content-between mb-3">
+              <span class="text-muted">Subtotal</span>
+              <span>{{ subtotal | currency: 'USD' }}</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-3">
+              <span class="text-muted">Shipping</span>
+              <span>{{ shipping | currency: 'USD' }}</span>
+            </div>
+
+            <hr class="text-secondary opacity-25" />
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <span class="fw-semibold">Total</span>
+              <span class="fs-4 fw-bold text-primary">{{ total | currency: 'USD' }}</span>
+            </div>
+          }
+
+          <!-- Pay Button -->
+          <button
+            type="button"
+            class="btn btn-primary btn-lg w-100 rounded-3"
+            [disabled]="!canPay"
+            (click)="payNow()"
+          >
+            @if (!isLoading) {
+              <span>
+                <i class="fa-solid fa-lock me-2" aria-hidden="true"></i>
+                Pay Now
+              </span>
+            } @else {
+              <span>
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                Redirecting to Stripe...
+              </span>
+            }
+          </button>
+
+          @if (!isLoading && !canPay) {
+            <p class="text-danger small mt-3 mb-0">
+              Review your shipping address, delivery option and cart before paying.
+            </p>
+          }
+
+          <div class="text-center mt-3">
+            <small class="text-muted">
+              <i class="fa-solid fa-shield-halved me-1" aria-hidden="true"></i>
+              Secure payment powered by Stripe
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-center text-muted small mt-3">
+        Your card details are entered on Stripe's secure checkout page.
+      </p>
+    </div>
+  </div>
+</div>

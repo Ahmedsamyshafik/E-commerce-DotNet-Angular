@@ -1,0 +1,115 @@
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+  <button
+    type="button"
+    class="btn"
+    [class.btn-primary]="canEdit"
+    [class.btn-secondary]="!canEdit"
+    [disabled]="!canEdit"
+    (click)="UpdateAddress()"
+  >
+    Save address
+  </button>
+  <button
+    type="button"
+    class="btn"
+    [ngClass]="{ 'btn-danger': canEdit, 'btn-success': !canEdit }"
+    [attr.aria-pressed]="canEdit"
+    (click)="toggleEdit()"
+  >
+    {{ canEdit ? 'Cancel editing' : 'Edit address' }}
+  </button>
+</div>
+
+@if (isLoading) {
+  <p class="text-muted">Loading your saved address...</p>
+}
+
+<form [formGroup]="address" class="checkout-form">
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>First name</mat-label>
+    <input
+      matInput
+      id="firstName"
+      formControlName="firstName"
+      [readonly]="!canEdit"
+      autocomplete="given-name"
+    />
+    @if (isInvalid('firstName')) {
+      <mat-error>{{ errorFor('firstName') }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Last name</mat-label>
+    <input
+      matInput
+      id="lastName"
+      formControlName="lastName"
+      [readonly]="!canEdit"
+      autocomplete="family-name"
+    />
+    @if (isInvalid('lastName')) {
+      <mat-error>{{ errorFor('lastName') }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Street</mat-label>
+    <input
+      matInput
+      id="street"
+      formControlName="street"
+      [readonly]="!canEdit"
+      autocomplete="street-address"
+    />
+    @if (isInvalid('street')) {
+      <mat-error>{{ errorFor('street') }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>City</mat-label>
+    <input
+      matInput
+      id="city"
+      formControlName="city"
+      [readonly]="!canEdit"
+      autocomplete="address-level2"
+    />
+    @if (isInvalid('city')) {
+      <mat-error>{{ errorFor('city') }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Zip code</mat-label>
+    <input
+      matInput
+      id="zipCode"
+      formControlName="zipCode"
+      [readonly]="!canEdit"
+      autocomplete="postal-code"
+    />
+    @if (isInvalid('zipCode')) {
+      <mat-error>{{ errorFor('zipCode') }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>State</mat-label>
+    <input
+      matInput
+      id="state"
+      formControlName="state"
+      [readonly]="!canEdit"
+      autocomplete="address-level1"
+    />
+    @if (isInvalid('state')) {
+      <mat-error>{{ errorFor('state') }}</mat-error>
+    }
+  </mat-form-field>
+
+  <div class="d-flex justify-content-end">
+    <button mat-button matStepperNext type="button" [disabled]="address.invalid">Next</button>
+  </div>
+</form>

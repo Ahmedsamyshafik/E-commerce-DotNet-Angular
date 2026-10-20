@@ -1,0 +1,89 @@
+<section class="pt-5">
+  <div class="form-container">
+    <h2 class="text-center">Register</h2>
+    <form [formGroup]="formGroup" (ngSubmit)="submit()">
+      <div class="form-group">
+        <label for="registerUsername">UserName</label>
+        <input
+          id="registerUsername"
+          type="text"
+          class="form-control"
+          formControlName="UserName"
+          autocomplete="username"
+          [class.is-valid]="_username.valid && (_username.touched || _username.dirty)"
+          [class.is-invalid]="_username.invalid && _username.touched"
+        />
+        @if (_username.hasError('required') && _username.touched) {
+          <span class="text-danger">Username is required.</span>
+        } @else if (_username.hasError('minlength') && _username.touched) {
+          <span class="text-danger">Username must be at least 6 characters.</span>
+        } @else if (_username.hasError('pattern') && _username.touched) {
+          <span class="text-danger">Username must not contain spaces.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="registerDisplayName">Display name</label>
+        <input
+          id="registerDisplayName"
+          type="text"
+          class="form-control"
+          formControlName="DisplayName"
+          autocomplete="name"
+          [class.is-valid]="_DisplayName.valid && (_DisplayName.touched || _DisplayName.dirty)"
+          [class.is-invalid]="_DisplayName.invalid && _DisplayName.touched"
+        />
+        @if (_DisplayName.hasError('required') && _DisplayName.touched) {
+          <span class="text-danger">Display name is required.</span>
+        } @else if (_DisplayName.hasError('whitespace') && _DisplayName.touched) {
+          <span class="text-danger">Display name cannot be only spaces.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="registerEmail">Email</label>
+        <input
+          id="registerEmail"
+          type="email"
+          class="form-control"
+          formControlName="email"
+          autocomplete="email"
+          [class.is-valid]="_email.valid && (_email.touched || _email.dirty)"
+          [class.is-invalid]="_email.invalid && _email.touched"
+        />
+        @if (_email.hasError('required') && _email.touched) {
+          <span class="text-danger">Email is required.</span>
+        } @else if (_email.hasError('email') && _email.touched) {
+          <span class="text-danger">Enter a valid email address.</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="registerPassword">Password</label>
+        <input
+          id="registerPassword"
+          type="password"
+          class="form-control"
+          formControlName="password"
+          autocomplete="new-password"
+          [class.is-valid]="_password.valid && (_password.touched || _password.dirty)"
+          [class.is-invalid]="_password.invalid && _password.touched"
+        />
+        @if (_password.hasError('required') && _password.touched) {
+          <span class="text-danger">Password is required.</span>
+        } @else if (_password.hasError('pattern') && _password.touched) {
+          <span class="text-danger">
+            Password must contain upper and lower case letters, a number, a special character
+            (#$&#64;!.), and be at least 8 characters long.
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
+        <button class="btn btn-info w-100" type="submit" [disabled]="formGroup.invalid || isSubmitting">
+          {{ isSubmitting ? 'Creating account...' : 'Register' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</section>

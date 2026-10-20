@@ -1,0 +1,36 @@
+<div class="card h-100">
+  @if (Product.photoUrls?.length) {
+    <img
+      [src]="baseUrl + Product.photoUrls[0].url"
+      class="card-img-top"
+      width="75%"
+      height="200"
+      [alt]="Product.name"
+    />
+  }
+  <div class="card-body">
+    <h5 class="card-title">{{ Product.name }}</h5>
+    <p class="card-text">{{ Product.description }}</p>
+    <p class="price">
+      @if (Product.priceAfterDiscount != null) {
+        <span class="old-price">{{ Product.realPrice | currency }}</span>
+        {{ Product.priceAfterDiscount | currency }}
+      } @else {
+        {{ Product.realPrice | currency }}
+      }
+    </p>
+
+    <div class="d-flex justify-content-between align-items-start">
+      <button type="button" (click)="SetBasketValue()" class="btn btn-dark">
+        <i class="fa fa-shopping-cart" aria-hidden="true"></i> Add to cart
+      </button>
+      <a
+        routerLink="/shop/product-details/{{ Product.id }}"
+        class="btn btn-success"
+        [attr.aria-label]="'View details for ' + Product.name"
+      >
+        <i class="fa fa-info-circle" aria-hidden="true"></i> Details
+      </a>
+    </div>
+  </div>
+</div>

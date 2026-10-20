@@ -1,0 +1,155 @@
+@if (isLoading) {
+  <div class="container my-5 text-center">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading product...</span>
+    </div>
+  </div>
+} @else if (errorMessage && !product) {
+  <div class="container my-5">
+    <div class="alert alert-danger text-center" role="alert">
+      {{ errorMessage }}
+      <button type="button" class="btn btn-sm btn-outline-dark ms-2" (click)="loadProduct()">
+        Retry
+      </button>
+    </div>
+  </div>
+} @else if (product) {
+  <div class="container my-5">
+    <div class="row">
+      <div class="col-md-5">
+        <div class="main-img">
+          @if (mainImage) {
+            <lib-ngx-image-zoom
+              [thumbImage]="mainImage"
+              [fullImage]="mainImage"
+              [magnification]="0.2"
+              [enableScrollZoom]="true"
+              [lensWidth]="200"
+              [lensHeight]="200"
+              [enableLens]="true"
+            ></lib-ngx-image-zoom>
+          }
+
+          <div class="row my-3 previews">
+            @if (product.photoUrls?.length) {
+              @for (item of product.photoUrls; track item.id; let index = $index) {
+                <div class="col-md-3">
+                  <button
+                    type="button"
+                    class="image-preview-button"
+                    [attr.aria-label]="'Show image ' + (index + 1) + ' of ' + product.name"
+                    (click)="ReplaceMainImage(item.url)"
+                  >
+                    <img class="w-100" [src]="imageBaseUrl + item.url" [alt]="product.name" />
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-7">
+        <div class="main-description px-2">
+          <div class="category text-bold">Category: {{ product.categoryName }}</div>
+          <div class="product-title text-bold my-3">
+            {{ product.name }}
+          </div>
+
+          <div class="price-area my-4">
+            @if (product.priceAfterDiscount != null) {
+              <p class="old-price mb-1">
+                <del>{{ product.realPrice | currency }}</del>
+              </p>
+              <p class="new-price text-bold mb-1">{{ product.priceAfterDiscount | currency }}</p>
+            } @else {
+              <p class="new-price text-bold mb-1">{{ product.realPrice | currency }}</p>
+            }
+
+            <p class="text-danger">quantity : {{ quantity }}</p>
+            <div class="d-flex align-items-center gap-2">
+              <button
+                type="button"
+                (click)="decrementBasket()"
+                class="btn btn-danger text-white"
+                [disabled]="quantity <= 1"
+                aria-label="Decrease quantity"
+              >
+                <i class="fa fa-minus" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                (click)="incrementBasket()"
+                class="btn btn-dark text-white"
+                [disabled]="quantity >= 10"
+                aria-label="Increase quantity"
+              >
+                <i class="fa fa-plus" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="buttons d-flex my-5 align-items-center">
+            <div class="block pt-2">
+              <button type="button" (click)="AddToBasket()" class="shadow btn custom-btn">
+                <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                Add to cart
+              </button>
+            </div>
+            <div class="block pt-2">
+              <a routerLink="/shop" class="shadow btn custom-btn">
+                <i class="fa fa-shopping-bag" aria-hidden="true"></i>
+                Continue shopping
+              </a>
+            </div>
+            <div class="block quantity">
+              <label for="cart_quantity" class="visually-hidden">Quantity</label>
+              <input
+                type="number"
+                class="form-control"
+                id="cart_quantity"
+                name="cart_quantity"
+                min="1"
+                [max]="10"
+                placeholder="Quantity"
+                [(ngModel)]="quantity"
+                (ngModelChange)="onQuantityChange($event)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="product-details my-4">
+          <p class="details-title text-color mb-1">Product Details</p>
+          <p class="description">{{ product.description }}</p>
+        </div>
+
+        <div class="row questions bg-light p-3">
+          <div class="col-md-1 icon">
+            <i class="fa fa-brands fa-rocketchat questions-icon" aria-hidden="true"></i>
+          </div>
+          <div class="col-md-11 text">
+            Have a question about our products at E-Store? Feel free to contact our representatives
+            via live chat or email.
+          </div>
+        </div>
+
+        <div class="delivery my-4">
+          <p class="font-weight-bold mb-0">
+            <span><i class="fa fa-solid fa-truck" aria-hidden="true"></i></span>
+            <b>Delivery options and times are confirmed at checkout</b>
+          </p>
+          <p class="text-secondary">Order now to get this product delivered</p>
+        </div>
+
+        <div class="delivery-options my-4">
+          <p class="font-weight-bold mb-0">
+            <span><i class="fa fa-solid fa-filter" aria-hidden="true"></i></span>
+            <b>Delivery options</b>
+          </p>
+          <p class="text-secondary">Delivery options are selected during checkout.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+}
