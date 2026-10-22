@@ -1,85 +1,249 @@
-# E-Commerce — .NET + Angular
+# E-Commerce — ASP.NET Core 10 + Angular 21
 
-Full-stack e-commerce application built with **ASP.NET Core 10 (Web API)** and **Angular 21**.
-
-## Features
-
-- Product & category catalog with image management
-- Shopping cart (Redis-backed, with guest cart support)
-- Authentication & authorization (ASP.NET Core Identity + JWT)
-- Orders, delivery methods and shipping addresses
-- Stripe payment integration (PaymentIntent + webhook)
-- Stock reservations with Hangfire background expiration jobs
-- Rate limiting and security headers
-- Unit/integration tests (xUnit)
+A full-stack e-commerce sample in one repository: a versioned ASP.NET Core Web API backed by SQL Server and Redis, plus the Angular single-page storefront that consumes it.
 
 ## Repository structure
 
 ```
-Backend_Src/
-  Src/
-    ECom.Api/              # ASP.NET Core Web API
-    ECom.Api.Tests/        # Tests
-    ECom.Infrastructure/   # EF Core, repositories, services
-    Ecom.Core/             # Entities, DTOs, interfaces
-
-FrontEnd_Src/
-  Src/
-    client/                # Angular application
+E-commerce-DotNet-Angular/
+  Backend_Src/
+    Src/
+      ECom.Api/              # ASP.NET Core Web API (host, controllers, middleware)
+      ECom.Api.Tests/        # xUnit/Moq unit tests + real-SQL integration tests
+      ECom.Infrastructure/   # EF Core, Identity/JWT, Redis, reservations, Hangfire, Stripe
+      Ecom.Core/             # Entities, DTOs, interfaces, mapping, domain exceptions
+    ECom.postman_collection.json
+    ECom.postman_environment.json
+  FrontEnd_Src/
+    Src/
+      client/                # Angular 21 application
 ```
 
-## Prerequisites
+## Tech stack
+
+| Area | Technology |
+| --- | --- |
+| Backend | ASP.NET Core 10 (`net10.0`) |
+| Client | Angular 21 |
+| Database | SQL Server with EF Core 10 |
+| Cache / cart | Redis (`StackExchange.Redis`) |
+| Identity | ASP.NET Core Identity; JWT delivered in an `HttpOnly` cookie |
+| Payments | Stripe Checkout (`Stripe.net`) |
+| Background jobs | Hangfire with SQL Server storage |
+| Validation | FluentValidation |
+| Tests | xUnit + Moq (plus EF Core InMemory/SQLite and Hangfire memory storage) |
+| Also used | AutoMapper, MailKit/MimeKit (SMTP email) |
+
+## Architecture
+
+| Project | Responsibility |
+| --- | --- |
+| `Ecom.Core` | Entities, DTOs, repository/service interfaces, mapping profiles, domain exceptions. |
+| `ECom.Infrastructure` | `AppDbContext` + migrations, Identity/JWT, Redis cart, stock reservation ledger, Hangfire jobs, Stripe/email services, repositories, business services. |
+| `ECom.Api` | ASP.NET Core host: controllers, DI composition, FluentValidation, exception handling, security headers, rate limiting, API versioning, OpenAPI/Scalar. |
+| `client` (Angular) | Storefront SPA: catalog, basket, checkout, Identity screens, Stripe redirect, payment-success polling. |
+| `ECom.Api.Tests` | xUnit/Moq unit tests and real-SQL integration tests. |
+
+Main flow:
+
+1. Cart lines live in Redis, keyed by the authenticated user id or a server-issued guest id.
+2. Adding or changing a line adjusts a stock reservation in SQL Server (conditional update) and schedules its expiration.
+3. `POST /api/v1/Order/CreateOrder` snapshots product prices, creates the order and items, attaches the reservations, then clears the Redis cart.
+4. `POST /api/v1/Payment/GeneratePayment` creates a Stripe Checkout Session, including the delivery fee as a line item.
+5. Stripe calls `POST /api/v1/Payment/Webhook`; the signature is verified, every reservation is confirmed, and only then is the order marked paid.
+6. Hangfire expires abandoned reservations after 3 days (one-shot job plus a minutely sweep).
+
+## Highlight: Stock Reservation Ledger
+
+`StockReservationService` is the single owner of stock mutations. The design avoids read-then-write races:
+
+- **Conditional update, not read-then-write.** Reserving runs `UPDATE TblProducts SET Quantity = Quantity - @delta WHERE Id = @id AND IsDeleted = 0 AND Quantity >= @delta`. If zero rows change, the request fails with `400` and the transaction rolls back. Two concurrent requests for the last unit serialize on the row, so only one can consume it.
+- **One active reservation per user/product.** A filtered unique index (`IX_TblStockReservations_ActiveUserProduct` on `UserId, ProductId`, filter `[Status] IN ('Pending','AttachedToOrder')`) enforces it in the database; released/expired/confirmed history rows are unconstrained.
+- **RowVersion on order attach.** `BaseEntity.RowVersion` is a SQL Server `rowversion`. When an order attaches its reservations, a concurrent expiry or renewal makes `SaveChanges` throw `DbUpdateConcurrencyException`, which is mapped to `409 Conflict` and rolls the request back.
+- **3-day TTL.** New reservations get `ExpiresAt = now + 3 days`.
+- **One-shot job plus a sweep.** Each newly created reservation schedules one Hangfire job; a minutely recurring job (`expire-stock-reservations`) catches reservations whose job was lost. Both call `ExpireReservationAsync`.
+- **Idempotent release.** `ExpireReservationAsync` only releases when its conditional `Status` update changes exactly one row, so a repeated or late run restores stock once and never releases an already-paid order.
+- **Real-SQL tests.** `StockReservationServiceSqlTests` runs against SQL Server to exercise the conditional T-SQL, the filtered index, and RowVersion behavior. It uses a dedicated database (`AngularDotNetEcom_ReservationTests`) and never the application database.
+
+## Payment flow
+
+- **Checkout Session.** `POST /api/v1/Payment/GeneratePayment` loads the signed-in user's pending order and creates a Stripe Checkout Session (`card`, USD). Line items are the order items plus the delivery fee, so the Stripe total matches `TblOrders.GetTotal()` (`SubTotal + deliveryMethod.Price`). The fee line is skipped when the price is `0`.
+- **Signed webhook.** `POST /api/v1/Payment/Webhook` is anonymous but verifies the `Stripe-Signature` header with `Stripe:WebhookSecret` (`EventUtility.ConstructEvent`). Only `checkout.session.completed` with `PaymentStatus == "paid"` is processed.
+- **Confirm before marking paid.** `GetReservationThenConfirm` confirms *all* reservations attached to the order. `UpdateOrderToConfirm` is called only when every reservation was confirmed. If confirmation fails (for example, the 3-day window expired and stock was released), the order is **not** marked paid and a warning with the order id and Stripe session id is logged so the payment can be refunded manually. The endpoint still returns `200` so Stripe stops retrying.
+- **Success page trusts the server.** After the redirect, the Angular success page polls `GET /api/v1/Order/GetAllOrders` (6 attempts, 3 seconds apart) and only shows "Payment confirmed" when the API reports `PaymentReceived` for that order. It never treats the `session_id` query parameter as proof of payment.
+
+## Features
+
+- **Catalog:** anonymous product/category reads; product search (all terms must match), category, min/max price filters, sorting, and pagination.
+- **Discounts:** percentage or fixed-amount discounts with an active date window; applied per product or per category; the lowest resulting price wins.
+- **Cart:** Redis-backed; quantities are reconciled with stock reservations; guest carts are supported by the API via a server-issued guest cookie.
+- **Orders:** price snapshots at creation, delivery methods, status tracking.
+- **Payments:** Stripe Checkout and a signature-verified webhook.
+- **Identity:** register, email confirmation, login (JWT in an HttpOnly cookie), forgot/reset password, change password, and a saved address.
+- **Authorization:** catalog write endpoints require the `Admin` role; catalog reads are anonymous; orders and payment require authentication; the cart also works for guests.
+- **API quality:** ProblemDetails error contract with a global exception handler (`400/401/403/404/409/500`), security headers, global and per-client rate limiting, FluentValidation, and API versioning (URL segment and `api-version` header).
+- **Developer docs:** OpenAPI and Scalar UI in Development at `/scalar/v1`.
+
+## Getting started
+
+### Prerequisites
 
 - .NET 10 SDK
-- SQL Server (LocalDB or full instance)
-- Redis (running on `localhost:6379`)
-- Node.js 20+ and npm
+- SQL Server (any edition reachable from the API)
+- Redis
+- Node.js and npm (for the Angular client)
+- A Stripe test account (only for the payment flow)
+- An SMTP account (only for registration/reset emails)
 
-## Backend setup
+### Configuration
 
-```powershell
+Set the following keys in `Backend_Src/Src/ECom.Api/appsettings.Development.json`, environment variables, or .NET user secrets. Use placeholders locally and never commit real credentials.
+
+| Key | Purpose |
+| --- | --- |
+| `ConnectionStrings:DefaultConnection` | SQL Server connection string. |
+| `Redis` | Redis endpoint, for example `<REDIS_HOST>:6379`. |
+| `token:Secret` | JWT signing secret (at least 32 bytes for HS256). |
+| `token:Issure` | JWT issuer (the key is spelled `Issure` in the code). |
+| `Stripe:PublishKey` | Stripe publishable key. |
+| `Stripe:SecretKey` | Stripe secret key (server-side only). |
+| `Stripe:WebhookSecret` | Stripe webhook signing secret. |
+| `EmailSetting:Port` | SMTP port (the code uses SSL on connect; the sample value is `465`). |
+| `EmailSetting:From` | Sender address. |
+| `EmailSetting:username` | SMTP username. |
+| `EmailSetting:password` | SMTP password. |
+| `EmailSetting:smtp` | SMTP host. |
+| `Seed:AdminEmail` | Optional; promotes an existing account to `Admin` at startup. |
+| `RateLimiting:*` | Optional; defaults are in `RateLimitingRegisteration`. |
+
+Example shape (replace every `<...>`):
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=<SQL_HOST>;Database=<DATABASE_NAME>;Trusted_Connection=True;TrustServerCertificate=True;"
+  },
+  "Redis": "<REDIS_HOST>:6379",
+  "Seed": { "AdminEmail": "<ADMIN_EMAIL_OR_EMPTY>" },
+  "EmailSetting": {
+    "Port": 465,
+    "From": "<SMTP_FROM_ADDRESS>",
+    "username": "<SMTP_USERNAME>",
+    "password": "<SMTP_PASSWORD>",
+    "smtp": "<SMTP_HOST>"
+  },
+  "token": {
+    "Secret": "<JWT_SIGNING_SECRET>",
+    "Issure": "<JWT_ISSUER>"
+  },
+  "Stripe": {
+    "PublishKey": "<STRIPE_PUBLISHABLE_KEY>",
+    "SecretKey": "<STRIPE_SECRET_KEY>",
+    "WebhookSecret": "<STRIPE_WEBHOOK_SECRET>"
+  }
+}
+```
+
+Alternatively, keep the values out of the repository entirely:
+
+```bash
+cd Backend_Src/Src/ECom.Api
+dotnet user-secrets set "token:Secret" "<JWT_SIGNING_SECRET>"
+dotnet user-secrets set "Stripe:SecretKey" "<STRIPE_SECRET_KEY>"
+dotnet user-secrets set "Stripe:WebhookSecret" "<STRIPE_WEBHOOK_SECRET>"
+dotnet user-secrets set "EmailSetting:password" "<SMTP_PASSWORD>"
+```
+
+At startup the app creates the `Admin` role if it is missing. No default users or passwords are created; `Seed:AdminEmail` only promotes an account that already exists.
+
+### Database
+
+Migrations are **not** applied automatically at startup — apply them with the EF Core tool, which is pinned in `Backend_Src/dotnet-tools.json`:
+
+```bash
 cd Backend_Src
-dotnet restore
-dotnet run --project Src/ECom.Api
+dotnet tool restore
+dotnet ef database update \
+  --project Src/ECom.Infrastructure/ECom.Infrastructure.csproj \
+  --startup-project Src/ECom.Api/ECom.Api.csproj
 ```
 
-The API listens on `http://localhost:5090`.
+### Run the API
 
-Sensitive values in `appsettings.json` are intentionally empty. Provide them with
-[.NET user-secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets):
-
-```powershell
-cd Src/ECom.Api
-dotnet user-secrets set "EmailSetting:password" "<gmail-app-password>"
-dotnet user-secrets set "token:Secret" "<jwt-signing-secret>"
-dotnet user-secrets set "Stripe:SecretKey" "<stripe-secret-key>"
-dotnet user-secrets set "Stripe:WebhookSecret" "<stripe-webhook-secret>"
+```bash
+dotnet run --project Backend_Src/Src/ECom.Api/ECom.Api.csproj
 ```
 
-Database migrations are applied on startup / via EF Core tooling, and an admin
-account is seeded using `Seed:AdminEmail` plus user-secrets.
+- HTTP: <http://localhost:5090>
+- HTTPS profile: <https://localhost:7256>
+- OpenAPI/Scalar (Development): <http://localhost:5090/scalar/v1>
 
-## Frontend setup
+### Run the Angular client
 
-```powershell
+```bash
 cd FrontEnd_Src/Src/client
 npm install
 npm start
 ```
 
-The Angular dev server runs on `http://localhost:4200` and calls the API at
-`http://localhost:5090/api/v1` (see `src/environments/environment.development.ts`).
+`npm start` runs `ng serve`; the client is served at <http://localhost:4200>. The development environment points at `http://localhost:5090/api/v1`.
 
-## Tests
+### Stripe webhook locally (optional)
 
-```powershell
-cd Backend_Src
-dotnet test
+Forward Stripe events to the API and copy the printed signing secret into `Stripe:WebhookSecret`:
+
+```bash
+stripe listen --forward-to http://localhost:5090/api/v1/Payment/Webhook
 ```
 
-## Notes
+### Try the API
 
-- Never commit real credentials. Use user-secrets locally and environment
-  variables / a secret manager in production.
-- Stripe publishable keys (`pk_...`) are public by design; secret keys
-  (`sk_...`) and webhook secrets (`whsec_...`) must stay private.
+A Postman collection and a local environment are included in `Backend_Src/` (`ECom.postman_collection.json`, `ECom.postman_environment.json`).
+
+## Running tests
+
+From the repository root:
+
+```bash
+dotnet test Backend_Src/Src/ECom.Api/ECom.Api.slnx
+```
+
+The project contains unit tests (xUnit + Moq) and real-SQL integration tests.
+
+### Real-SQL tests and `ECOM_SKIP_SQL_TESTS`
+
+The integration tests in `StockReservationServiceSqlTests` need a running SQL Server at `localhost` (integrated security). They create and use the dedicated database `AngularDotNetEcom_ReservationTests` via `EnsureCreatedAsync`.
+
+Set `ECOM_SKIP_SQL_TESTS=1` to skip them:
+
+```powershell
+# PowerShell
+$env:ECOM_SKIP_SQL_TESTS = "1"
+dotnet test Backend_Src/Src/ECom.Api/ECom.Api.slnx
+```
+
+```bash
+# bash
+ECOM_SKIP_SQL_TESTS=1 dotnet test Backend_Src/Src/ECom.Api/ECom.Api.slnx
+```
+
+Important: when `ECOM_SKIP_SQL_TESTS=1` (or SQL Server is unreachable), the SQL tests return early and xUnit counts them as **passed**. A green test run therefore does not by itself prove that the real-SQL tests executed; check the SQL Server availability if you need that guarantee.
+
+## Known limitations / Roadmap
+
+These are known and intentional for the current scope:
+
+- Webhook event-level idempotency is not implemented (no event-id deduplication).
+- Payments that arrive after the reservation expired are not refunded automatically; the failure is logged for manual refund.
+- Confirmation of a multi-item order is not atomic: if one reservation fails mid-loop, earlier ones may already be confirmed.
+- Checkout Session creation has no idempotency key, so repeated calls can create multiple payable sessions.
+- Currency is hardcoded to USD.
+- Success/cancel URLs, the auth cookie domain, and CORS are configured for `localhost` only.
+- The guest cart is supported by the API but blocked in the Angular UI (the client requires sign-in before adding items).
+- No admin UI.
+- No dedicated order-history page (orders are fetched for the checkout success poll).
+- No logout.
+- No Angular tests.
+- No CI pipeline.
+- The Redis cart and the SQL reservation are not atomic (they are separate stores).
+- Cart keys have no TTL.
