@@ -23,4 +23,10 @@ yarn-error.log*
 # Logs and local files
 *.log
 .env
+.env.*
+!.env.example
 .env.local
+
+# Local configuration / secrets - never commit real credentials
+appsettings.Local.json
+appsettings.*.local.json
