@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Observable, Subscription, catchError, map, of, switchMap, take, timer } from 'rxjs';
 import { IOrderSummary } from '../../shared/Models/Order/orderModels';
+import { AuthService } from '../../core/services/auth.service';
 import { CheckoutService } from '../checkout.service';
 
 type SuccessState = 'checking' | 'confirmed' | 'failed' | 'processing' | 'notFound' | 'signedOut';
@@ -29,6 +30,7 @@ const POLL_INTERVAL_MS = 3000;
 })
 export class PaymentSuccessComponent implements OnInit, OnDestroy {
   private readonly checkoutService = inject(CheckoutService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private pollSubscription?: Subscription;
 
@@ -39,7 +41,7 @@ export class PaymentSuccessComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const orderId = this.getPendingOrderId();
 
-    if (!localStorage.getItem('userId')) {
+    if (!this.auth.isAuthenticated) {
       this.state = 'signedOut';
       return;
     }

@@ -85,23 +85,38 @@
           </button>
 
           <div class="dropdown-menu dropdown-menu-end" [class.show]="isDropdownOpen">
-            <a
-              routerLink="/account/register"
-              class="dropdown-item d-flex align-items-center justify-content-between"
-              (click)="closeMenu()"
-            >
-              <span>Register</span>
-              <i class="fa fa-user-plus ms-2" aria-hidden="true"></i>
-            </a>
+            @if (isSignedIn) {
+              <span class="dropdown-item-text small text-muted">
+                Signed in as <strong>{{ userName || 'Account' }}</strong>
+              </span>
 
-            <a
-              routerLink="/account/login"
-              class="dropdown-item d-flex align-items-center justify-content-between"
-              (click)="closeMenu()"
-            >
-              <span>Login</span>
-              <i class="fa fa-sign-in ms-2" aria-hidden="true"></i>
-            </a>
+              <button
+                type="button"
+                class="dropdown-item d-flex align-items-center justify-content-between"
+                (click)="logout()"
+              >
+                <span>Logout</span>
+                <i class="fa fa-sign-out ms-2" aria-hidden="true"></i>
+              </button>
+            } @else {
+              <a
+                routerLink="/account/register"
+                class="dropdown-item d-flex align-items-center justify-content-between"
+                (click)="closeMenu()"
+              >
+                <span>Register</span>
+                <i class="fa fa-user-plus ms-2" aria-hidden="true"></i>
+              </a>
+
+              <a
+                routerLink="/account/login"
+                class="dropdown-item d-flex align-items-center justify-content-between"
+                (click)="closeMenu()"
+              >
+                <span>Login</span>
+                <i class="fa fa-sign-in ms-2" aria-hidden="true"></i>
+              </a>
+            }
           </div>
         </li>
       </ul>

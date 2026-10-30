@@ -13,6 +13,7 @@ using ECom.Api.Helper;
 using ECom.Infrastructure.Repositories;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ECom.Api.Controllers.Account.V1
@@ -23,8 +24,11 @@ namespace ECom.Api.Controllers.Account.V1
     [ApiController]
     public class AccountController : MyBaseController
     {
-        public AccountController(IUnitOfWork unitOfWork) : base(unitOfWork)
+        private readonly IWebHostEnvironment _environment;
+
+        public AccountController(IUnitOfWork unitOfWork, IWebHostEnvironment environment) : base(unitOfWork)
         {
+            _environment = environment;
         }
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto, CancellationToken cancellationToken = default)
@@ -57,18 +61,46 @@ namespace ECom.Api.Controllers.Account.V1
                 await _unitOfWork.CartProductFacade.UpdateCartIdForGuestUsers(guestCartId, res.user.Id, cancellationToken);
                 GuestCartCookie.Clear(HttpContext);
             }
-            Response.Cookies.Append("token", res.token, new CookieOptions
-            {
-                //Secure=true, https
-
-                HttpOnly = true,
-                Domain = "localhost",
-                Expires = DateTime.Now.AddDays(1),
-                IsEssential = true,
-                SameSite = SameSiteMode.Strict
-
-            });
+            Response.Cookies.Append("token", res.token, CreateTokenCookieOptions(DateTime.Now.AddDays(1)));
             return Ok(new responseApi(200, "success", res.user));
+        }
+
+        /// <summary>
+        /// Ends the cookie session. Kept anonymous so an expired/absent token can still
+        /// clear a stale browser cookie; the endpoint never reveals whether a session existed.
+        /// </summary>
+        [HttpPost("Logout")]
+        [AllowAnonymous]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("token", CreateTokenCookieOptions(DateTime.Now.AddDays(-1)));
+            return Ok(new responseApi(200, "success", null));
+        }
+
+        /// <summary>
+        /// Returns the signed-in user's profile. The SPA uses this once on startup to
+        /// validate a cookie that may have expired and to render the signed-in nav state.
+        /// </summary>
+        [HttpGet("Me")]
+        [Authorize]
+        public async Task<IActionResult> Me(CancellationToken cancellationToken = default)
+        {
+            var email = User.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrWhiteSpace(email))
+                throw new BadRequestException("No email claim for this session !");
+
+            var user = await _unitOfWork.myAuth.GetUserByEmail(email, cancellationToken);
+            if (user is null)
+                throw new NotFoundException("User not found !");
+
+            return Ok(new responseApi(200, "success", new UserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                DisplayName = user.DisplayName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                ImgUrl = null
+            }));
         }
 
         [HttpPost("ForgetPassword")]
@@ -201,5 +233,29 @@ namespace ECom.Api.Controllers.Account.V1
             Street = address.Street,
             State = address.State
         };
+
+        /// <summary>
+        /// Single source of cookie options for Login/Logout. Delete() must use the same
+        /// domain, path and SameSite/Secure values as Append(), otherwise the browser keeps
+        /// the old cookie. In development an HTTPS API may be called from the HTTP Angular
+        /// dev server, which is cross-site for cookies; SameSite=None keeps the JWT usable
+        /// there. Production stays on SameSite=Strict.
+        /// </summary>
+        private CookieOptions CreateTokenCookieOptions(DateTime expires)
+        {
+            var isHttps = Request.IsHttps;
+            var crossSiteDevelopment = isHttps && _environment.IsDevelopment();
+
+            return new CookieOptions
+            {
+                HttpOnly = true,
+                Domain = "localhost",
+                Expires = expires,
+                IsEssential = true,
+                SameSite = crossSiteDevelopment ? SameSiteMode.None : SameSiteMode.Strict,
+                Secure = isHttps,
+                Path = "/"
+            };
+        }
     }
 }

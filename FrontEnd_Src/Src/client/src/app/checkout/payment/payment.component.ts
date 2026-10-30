@@ -6,6 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ToastrService } from 'ngx-toastr';
 import { EMPTY, Observable, catchError, finalize, map, of, switchMap, tap } from 'rxjs';
 import { BasketService } from '../../basket/basket.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ICreateOrder, IShippingAddress } from '../../shared/Models/Order/orderModels';
 import { CheckoutService } from '../checkout.service';
 import { PaymentService } from './payment.service';
@@ -39,6 +40,7 @@ export class PaymentComponent implements OnInit {
     private readonly checkoutService: CheckoutService,
     private readonly toastr: ToastrService,
     private readonly router: Router,
+    private readonly auth: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -108,12 +110,18 @@ export class PaymentComponent implements OnInit {
       )
       .subscribe({
         error: (error: unknown) => {
-          const message =
-            error instanceof HttpErrorResponse && error.status === 401
-              ? 'Please sign in to continue.'
-              : this.hasPendingOrder
-                ? 'Your order is saved, but the payment page could not be opened. Please try again.'
-                : 'We could not start the payment. Please try again in a moment.';
+          if (error instanceof HttpErrorResponse && error.status === 401) {
+            this.auth.clearSession();
+            this.toastr.info('Please sign in to continue.', 'Sign in required');
+            this.router.navigate(['/account/login'], {
+              queryParams: { returnUrl: '/checkout' },
+            });
+            return;
+          }
+
+          const message = this.hasPendingOrder
+            ? 'Your order is saved, but the payment page could not be opened. Please try again.'
+            : 'We could not start the payment. Please try again in a moment.';
           this.toastr.error(message, 'Payment');
         },
       });

@@ -14,22 +14,33 @@ namespace ECom.Api.Helper
         public const string Name = "cartGuestId";
 
         /// <summary>
-        /// Returns the guest cart id for the current request: the existing cookie value when
-        /// present, otherwise a new id that is also written to the response so the browser
-        /// sends it back on the next request.
+        /// Returns the guest cart id for the current request. The SPA keeps its own id in
+        /// localStorage and sends it as X-Cart-Id; that value wins so the cart survives even
+        /// when cookies are blocked. Otherwise the existing cookie is reused, and a new id is
+        /// issued when neither is available. The response cookie is kept in sync for clients
+        /// that rely on it.
         /// </summary>
-        public static string Resolve(HttpContext httpContext)
+        public static string Resolve(HttpContext httpContext, string? preferredId = null)
         {
-            if (httpContext.Request.Cookies.TryGetValue(Name, out var existing)
-                && !string.IsNullOrWhiteSpace(existing))
+            httpContext.Request.Cookies.TryGetValue(Name, out var existing);
+
+            var id = NormalizeId(preferredId) ?? NormalizeId(existing);
+            if (id is null)
             {
-                return existing;
+                id = Guid.NewGuid().ToString();
             }
 
-            var id = Guid.NewGuid().ToString();
-            httpContext.Response.Cookies.Append(Name, id, CreateOptions(httpContext));
+            if (!string.Equals(id, existing, StringComparison.Ordinal))
+            {
+                httpContext.Response.Cookies.Append(Name, id, CreateOptions(httpContext));
+            }
+
             return id;
         }
+
+        /// <summary>Rejects arbitrary Redis keys and returns the canonical GUID form.</summary>
+        private static string? NormalizeId(string? value)
+            => Guid.TryParse(value, out var id) ? id.ToString() : null;
 
         /// <summary>Expires the guest-cart cookie after a successful login merge.</summary>
         public static void Clear(HttpContext httpContext)

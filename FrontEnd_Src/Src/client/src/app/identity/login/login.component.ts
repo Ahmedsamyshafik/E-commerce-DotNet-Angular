@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { BasketService } from '../../basket/basket.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ILoginModel } from '../../shared/Models/Account/LoginModel';
 import { getHttpErrorMessage } from '../../shared/utils/http-error.util';
 import { IdentityService } from '../identity.service';
@@ -28,6 +29,7 @@ export class LoginComponent implements OnInit {
     private readonly router: Router,
     private readonly route: ActivatedRoute,
     private readonly basket: BasketService,
+    private readonly auth: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -47,7 +49,13 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    const loginObj: ILoginModel = this.formGroup.getRawValue();
+    const formValue = this.formGroup.getRawValue();
+    const loginObj: ILoginModel = {
+      email: formValue.email,
+      password: formValue.password,
+      // The backend merges this guest cart into the user's cart on login.
+      cartGuestId: this.basket.getGuestCartId(),
+    };
     this.isSubmitting = true;
 
     this.identityService.Login(loginObj).subscribe({
@@ -59,21 +67,22 @@ export class LoginComponent implements OnInit {
           return;
         }
 
-        localStorage.setItem('userId', user.id);
+        this.auth.setUser(user);
         this.toastr.success(
           user.displayName ? `Welcome back, ${user.displayName}.` : 'Signed in successfully.',
           'Sign in',
         );
 
-        // Load the signed-in user's server cart (the guest-cart merge is backend-owned).
-        this.basket.GetBasket().subscribe();
-
+        // The login endpoint has already merged the guest cart (if any) into this user's
+        // cart; this call loads the merged result before we continue to checkout.
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         const safeReturnUrl =
           returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')
             ? returnUrl
             : '/';
-        this.router.navigateByUrl(safeReturnUrl);
+
+        this.basket.clearGuestCartId();
+        this.basket.GetBasket().subscribe(() => this.router.navigateByUrl(safeReturnUrl));
       },
       error: (error) => {
         this.isSubmitting = false;

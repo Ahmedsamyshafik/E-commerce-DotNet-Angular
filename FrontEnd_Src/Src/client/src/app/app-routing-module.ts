@@ -30,6 +30,7 @@ const routes: Routes = [
       import('./checkout/payment-success/payment-success.component').then(
         (m) => m.PaymentSuccessComponent,
       ),
+    canActivate: [authGuard],
   },
   { path: 'success', redirectTo: 'Success', pathMatch: 'full' },
   { path: '**', redirectTo: '' },

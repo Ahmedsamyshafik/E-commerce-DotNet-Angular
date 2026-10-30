@@ -130,7 +130,14 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
+// In development the SPA runs on http://localhost:4200 while the API may also expose an
+// HTTPS endpoint. Redirecting HTTP calls there turns every cookie request into a cross-site
+// request (http -> https), so SameSite cookies are dropped and the cart/session appear empty.
+// The production pipeline still redirects; local development can use the plain HTTP URL.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // Authentication MUST run before the per-client rate-limiting policy: that policy keys
 // authenticated requests by user id, which only exists once authentication has populated

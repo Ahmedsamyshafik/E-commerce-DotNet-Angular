@@ -30,9 +30,9 @@ namespace ECom.Api.Controllers.Cart.V1
 
         }
 
-        // The cart owner is the authenticated user id when signed in, otherwise the stable
-        // server-issued guest id from the cookie. A fresh Guid per request (the previous
-        // behavior) made guest carts impossible to retrieve.
+        // The cart owner is the authenticated user id when signed in, otherwise the guest id
+        // sent by the SPA (localStorage -> X-Cart-Id) or the server-issued cookie. The header
+        // keeps the guest cart stable even when the browser blocks the cart cookie.
         private string cardId
         {
             get
@@ -43,7 +43,7 @@ namespace ECom.Api.Controllers.Cart.V1
                     return userId;
                 }
 
-                return GuestCartCookie.Resolve(HttpContext);
+                return GuestCartCookie.Resolve(HttpContext, Request.Headers["X-Cart-Id"].ToString());
             }
         }
 

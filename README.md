@@ -79,7 +79,7 @@ Main flow:
 - **Cart:** Redis-backed; quantities are reconciled with stock reservations; guest carts are supported by the API via a server-issued guest cookie.
 - **Orders:** price snapshots at creation, delivery methods, status tracking.
 - **Payments:** Stripe Checkout and a signature-verified webhook.
-- **Identity:** register, email confirmation, login (JWT in an HttpOnly cookie), forgot/reset password, change password, and a saved address.
+- **Identity:** register, email confirmation, login (JWT in an HttpOnly cookie), logout, forgot/reset password, change password, and a saved address.
 - **Authorization:** catalog write endpoints require the `Admin` role; catalog reads are anonymous; orders and payment require authentication; the cart also works for guests.
 - **API quality:** ProblemDetails error contract with a global exception handler (`400/401/403/404/409/500`), security headers, global and per-client rate limiting, FluentValidation, and API versioning (URL segment and `api-version` header).
 - **Developer docs:** OpenAPI and Scalar UI in Development at `/scalar/v1`.
@@ -239,10 +239,10 @@ These are known and intentional for the current scope:
 - Checkout Session creation has no idempotency key, so repeated calls can create multiple payable sessions.
 - Currency is hardcoded to USD.
 - Success/cancel URLs, the auth cookie domain, and CORS are configured for `localhost` only.
-- The guest cart is supported by the API but blocked in the Angular UI (the client requires sign-in before adding items).
+- Guest carts are keyed by a non-HttpOnly cookie; a browser that blocks that cookie cannot keep a guest cart before login.
 - No admin UI.
 - No dedicated order-history page (orders are fetched for the checkout success poll).
-- No logout.
+- Logout expires the auth cookie but does not revoke the JWT server-side; a copied token stays valid until its one-day expiry.
 - No Angular tests.
 - No CI pipeline.
 - The Redis cart and the SQL reservation are not atomic (they are separate stores).
