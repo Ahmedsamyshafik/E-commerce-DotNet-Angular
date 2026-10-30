@@ -229,7 +229,6 @@ ECOM_SKIP_SQL_TESTS=1 dotnet test Backend_Src/Src/ECom.Api/ECom.Api.slnx
 
 Important: when `ECOM_SKIP_SQL_TESTS=1` (or SQL Server is unreachable), the SQL tests return early and xUnit counts them as **passed**. A green test run therefore does not by itself prove that the real-SQL tests executed; check the SQL Server availability if you need that guarantee.
 
-## Known limitations / Roadmap
 
 These are known and intentional for the current scope:
 
@@ -239,10 +238,10 @@ These are known and intentional for the current scope:
 - Checkout Session creation has no idempotency key, so repeated calls can create multiple payable sessions.
 - Currency is hardcoded to USD.
 - Success/cancel URLs, the auth cookie domain, and CORS are configured for `localhost` only.
-- Guest carts are keyed by a non-HttpOnly cookie; a browser that blocks that cookie cannot keep a guest cart before login.
+- The guest cart is supported by the API but blocked in the Angular UI (the client requires sign-in before adding items).
 - No admin UI.
 - No dedicated order-history page (orders are fetched for the checkout success poll).
-- Logout expires the auth cookie but does not revoke the JWT server-side; a copied token stays valid until its one-day expiry.
+- No logout.
 - No Angular tests.
 - No CI pipeline.
 - The Redis cart and the SQL reservation are not atomic (they are separate stores).
